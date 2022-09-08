@@ -10,7 +10,7 @@
     <body>
         <h1> Gravity </h1>
 
-        <div class="SimulationWindow" style="background-color: blue">
+        <div class="SimulationWindow" style="background-color: rgb(169, 169, 238)">
             <canvas id="theCanvas" width="500" height="500">
                 Canvas not supported; please update your browser.
             </canvas>
@@ -20,11 +20,27 @@
             <button id="pauseButton">
                 Pause
             </button>
+            <br> 
             <button id="resetButton">
                 Reset
             </button>
-
         </div>
+
+        <div>
+            <button id="testParticle">
+                Add test particle
+            </button>
+            <br> 
+            <button id="gravityObject">
+                Add attractive object
+            </button>
+            <br> 
+            <button id="repulsiveObject">
+                Add repulsive object
+            </button>
+        </div>
+
+
     </body>
 
     <script type="text/javascript" src="js/GenericGravitySimulation.js"></script>
