@@ -23,7 +23,7 @@ var metersPerPixel = 1; // earthRadius / (0.355 * canvasWidth);
 
 var currentAddMode = "testParticle";
 
-const gridSize = 4;
+const gridSize = 12;
 
 function updateCanvas() {
     for (let g = 0; g < listOfForceObjects.length; g++) {
@@ -42,9 +42,9 @@ function updateCanvas() {
     forceFieldGrid.length = 0;
     for (let i = 1; i < gridSize; i++) {
         var rowGrid = [];
-        for (let j = 1; j < gridSize; j++) {
+        for (let j = gridSize -1 ; j > 0; j--) {
             var xGrid = -canvasWidth/2 + i * (canvasWidth/gridSize);
-            var yGrid = canvasWidth/2 + j * (canvasWidth/gridSize);
+            var yGrid = -canvasWidth/2 + j * (canvasWidth/gridSize);
             var {ax, ay} = calculateAcceleration(xGrid, yGrid);
             rowGrid.push([ax, ay]);
         }
@@ -76,7 +76,9 @@ function updateCanvas() {
             for (let j = 1; j < gridSize; j++) {
                 var xGrid = i * (canvasWidth/gridSize);
                 var yGrid = j * (canvasWidth/gridSize);
-                canvas_arrow(theContext, xGrid, yGrid, xGrid+scaledForceFieldGrid[i-1][j-1][0], yGrid+scaledForceFieldGrid[i-1][j-1][1]);
+                var xFin = xGrid + scaledForceFieldGrid[i-1][j-1][0];
+                var yFin = yGrid - scaledForceFieldGrid[i-1][j-1][1];
+                canvas_arrow(theContext, xGrid, yGrid, xFin, yFin);
             }
         }
         theContext.stroke();
