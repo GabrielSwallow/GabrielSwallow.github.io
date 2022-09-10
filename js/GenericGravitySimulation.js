@@ -6,26 +6,31 @@ var addTestParticleButton = document.getElementById("testParticle");
 var addgravityObjectButton = document.getElementById("gravityObject");
 var addReuplsiveObjectButton = document.getElementById("repulsiveObject");
 
-var earthRadius = 6371000;
-var mountainHeight = earthRadius * 0.165;
-var newtonG = 6.67e-11;
-var earthMass = 5.97e24;
-var dt = 1;
+var earthRadius = 1; // 6371000;
+// var mountainHeight = earthRadius * 0.165;
+var newtonG = 1; // 6.67e-11;
+var earthMass = 10; // 5.97e24;
+var dt = 0.1;
 
 var listOfParticles = [];
 var listOfForceObjects = [];
+var forceFieldGrid = [];
+var forceFieldGridMagnitude = [];
+
 
 canvasWidth = theCanvas.width;
-var metersPerPixel = earthRadius / (0.355 * canvasWidth);
+var metersPerPixel = 1; // earthRadius / (0.355 * canvasWidth);
 
-var currentAddMode = "testParticle"; 
+var currentAddMode = "testParticle";
+
+const gridSize = 4;
 
 function updateCanvas() {
     for (let g = 0; g < listOfForceObjects.length; g++) {
-        var {x, y, attractive} = listOfForceObjects[g];
+        const {x, y, attractive} = listOfForceObjects[g];
 
-        var pixelX = theCanvas.width/2 + x/metersPerPixel;
-        var pixelY = theCanvas.height/2 - y/metersPerPixel;
+        const pixelX = theCanvas.width/2 + x/metersPerPixel;
+        const pixelY = theCanvas.height/2 - y/metersPerPixel;
 
         theContext.beginPath();
         theContext.arc(pixelX, pixelY, 10, 0, 2*Math.PI);
@@ -33,12 +38,53 @@ function updateCanvas() {
         else if (attractive == -1) {theContext.fillStyle = "black"}
         theContext.fill();
     }
+
+    forceFieldGrid.length = 0;
+    for (let i = 1; i < gridSize; i++) {
+        var rowGrid = [];
+        for (let j = 1; j < gridSize; j++) {
+            var xGrid = -canvasWidth/2 + i * (canvasWidth/gridSize);
+            var yGrid = canvasWidth/2 + j * (canvasWidth/gridSize);
+            var {ax, ay} = calculateAcceleration(xGrid, yGrid);
+            rowGrid.push([ax, ay]);
+        }
+        forceFieldGrid.push(rowGrid)
+    }
+    forceFieldGridMagnitude = forceFieldGrid.map( 
+        (row) => { 
+            return row.map( 
+                ([ax,ay]) => {
+                    return Math.sqrt(ax*ax + ay*ay) 
+                }   
+            )
+        }
+    )
+        
+    var largestForce = Math.max(...[].concat(...forceFieldGridMagnitude))
+    if (largestForce != 0) {
+        var scaledForceFieldGrid = forceFieldGrid.map( 
+            (row) => { 
+                return row.map(
+                    ([ax,ay]) => {
+                        return [50*ax/largestForce, 50*ay/largestForce] 
+                    }
+                )
+            }
+        )
+        theContext.beginPath();
+        for (let i = 1; i < gridSize; i++) {
+            for (let j = 1; j < gridSize; j++) {
+                var xGrid = i * (canvasWidth/gridSize);
+                var yGrid = j * (canvasWidth/gridSize);
+                canvas_arrow(theContext, xGrid, yGrid, xGrid+scaledForceFieldGrid[i-1][j-1][0], yGrid+scaledForceFieldGrid[i-1][j-1][1]);
+            }
+        }
+        theContext.stroke();
+    }
     
 }
 
-function calculateAcceleration(particle) {
-    // console.log(particle);
-    const {x, y, vx, vy} = particle;
+function calculateAcceleration(x, y) {
     const particleX = x;
     const particleY = y;
 
@@ -59,15 +105,56 @@ function calculateAcceleration(particle) {
     return {ax, ay};
 }
 
-function propagateParticle(particle) {
-    for (let i = 0; i < 10; i++){
+function propagateParticleEuler(particle) {
+    for (let i = 0; i < 100; i++){
+        if (particle.x > canvasWidth/2 || particle.x < -canvasWidth/2) {
+            particle.vx = - particle.vx
+        }
+        if (particle.y > canvasWidth/2 || particle.y < -canvasWidth/2) {
+            particle.vy = - particle.vy
+        }
+
         const {x, y, vx, vy} = particle;
-        const {ax, ay} = calculateAcceleration(particle);
+        const {ax, ay} = calculateAcceleration(particle.x, particle.y);
         particle.vx += ax * dt;
         particle.vy += ay * dt;
         particle.x += vx * dt;
         particle.y += vy * dt;
     }
+}
+
+function propagateParticleRungeKutta(particle) {
+    for (let i = 0; i < 10; i++){
+        const {x, y, vx, vy} = particle;
+
+        var {deltaVx, deltaVy} = calculateChangeRungeKutta(vx, vy); 
+        particle.vx += deltaVx;
+        particle.vy += deltaVy;
+
+        var {deltaX, deltaY} = calculateChangeRungeKutta(x, y);
+        particle.x += deltaX;
+        particle.y += deltaY;
+    }
+}
+
+function calculateDeltaVxRungeKutta(x, y) {
+    var {k1x, k1y} = calculateAcceleration(x, y);
+    var {k2x, k2y} = calculateAcceleration(x + (k1x*dt/2), y + (k1y*dt/2));
+    var {k3x, k3y} = calculateAcceleration(x + (k2x*dt/2), y + (k2y*dt/2));
+    var {k4x, k4y} = calculateAcceleration(x + k3x*dt, y + k3y*dt);
+    var deltaX = (k1x + 2*k2x + 2*k3x + k4x) * dt/6;
+    var deltaY = (k1y + 2*k2y + 2*k3y + k4y) * dt/6;
+    return {deltaX, deltaY};
+}
+
+function calculateDeltaXRungeKutta(x, y) {
+    var {k1x, k1y} = calculateAcceleration(x, y);
+    var {k2x, k2y} = calculateAcceleration(x + (k1x*dt/2), y + (k1y*dt/2));
+    var {k3x, k3y} = calculateAcceleration(x + (k2x*dt/2), y + (k2y*dt/2));
+    var {k4x, k4y} = calculateAcceleration(x + k3x*dt, y + k3y*dt);
+    var deltaX = (k1x + 2*k2x + 2*k3x + k4x) * dt/6;
+    var deltaY = (k1y + 2*k2y + 2*k3y + k4y) * dt/6;
+    return {deltaX, deltaY};
 }
 
 function drawProjectile(particle) {
@@ -86,7 +173,7 @@ function moveProjectiles() {
         theContext.clearRect(0, 0, theCanvas.width, theCanvas.height);
         updateCanvas(); 
         for (let p = 0; p < listOfParticles.length; p++) {    
-            propagateParticle(listOfParticles[p]);
+            propagateParticleEuler(listOfParticles[p]);
             drawProjectile(listOfParticles[p]);
         }
         window.setTimeout(moveProjectiles, 1000/60);
@@ -135,7 +222,6 @@ theCanvas.onmousedown = (e) => {
 }
 
 theCanvas.onmouseup = (e) => {
-    console.log("mouse up");
     if (currentAddMode == "testParticle") {
         var rect = theCanvas.getBoundingClientRect();
         var canvasX = e.clientX - rect.x;
@@ -192,3 +278,55 @@ addReuplsiveObjectButton.onmouseup = () => {
 }
 
 moveProjectiles();
+
+
+function drawArrow(xInit, yInit, xFin, yFin) {
+    const arrowThikckness = 10;
+    const xDiff = xFin - xInit;
+    const yDiff = yFin - yInit; 
+    if (xDiff != 0) {
+        var theta = Math.atan(-yDiff/xDiff);
+    } else {
+        var theta = (yDiff/Math.abs(yDiff)) * Math.PI;
+    }
+
+
+    const corner1 = [
+        xInit + 5, //arrowThikckness*Math.sin(theta)/2, 
+        yInit // - arrowThikckness*Math.cos(theta)/2
+    ];
+    const corner2 = [
+        corner1[0] + xDiff*Math.cos(theta), 
+        corner1[1] - yDiff*Math.sin(theta)
+    ];
+    const corner3 = [
+        xInit, // - arrowThikckness*Math.sin(theta)/2, 
+        yInit + 5 // arrowThikckness*Math.cos(theta)/2
+    ];
+    const corner4 = [
+        corner3[0] + xDiff*Math.cos(theta), 
+        corner3[1] - yDiff*Math.sin(theta)
+    ];
+
+    theContext.beginPath();
+    theContext.moveTo(...corner1);
+    theContext.lineTo(...corner2);
+    theContext.lineTo(...corner4);
+    theContext.lineTo(...corner3);
+    theContext.lineTo(...corner1);
+    theContext.fillStyle = "red";
+    theContext.fill();
+}
+
+
+function canvas_arrow(context, fromx, fromy, tox, toy) {
+  var headlen = 5; // length of head in pixels
+  var dx = tox - fromx;
+  var dy = toy - fromy;
+  var angle = Math.atan2(dy, dx);
+  context.moveTo(fromx, fromy);
+  context.lineTo(tox, toy);
+  context.lineTo(tox - headlen * Math.cos(angle - Math.PI / 6), toy - headlen * Math.sin(angle - Math.PI / 6));
+  context.moveTo(tox, toy);
+  context.lineTo(tox - headlen * Math.cos(angle + Math.PI / 6), toy - headlen * Math.sin(angle + Math.PI / 6));
+}
