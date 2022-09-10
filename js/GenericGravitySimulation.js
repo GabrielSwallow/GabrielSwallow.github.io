@@ -7,6 +7,8 @@ var addgravityObjectButton = document.getElementById("gravityObject");
 var addReuplsiveObjectButton = document.getElementById("repulsiveObject");
 var add10TestParticlesButton = document.getElementById("10testParticles");
 var add100TestParticlesButton = document.getElementById("100testParticles");
+var forceFieldGridEnnabledButton = document.getElementById("forceFieldButton")
+var removeFastParticlesButton = document.getElementById("removeFastParticles");
 
 var earthRadius = 1; // 6371000;
 // var mountainHeight = earthRadius * 0.165;
@@ -24,6 +26,8 @@ canvasWidth = theCanvas.width;
 var metersPerPixel = 1; // earthRadius / (0.355 * canvasWidth);
 
 var currentAddMode = "testParticle";
+var forceFieldGridEnnabled = true;
+var removeFastParticlesEnabled = false;
 
 const gridSize = 12;
 
@@ -40,52 +44,52 @@ function updateCanvas() {
         else if (attractive == -1) {theContext.fillStyle = "black"}
         theContext.fill();
     }
-
-    forceFieldGrid.length = 0;
-    for (let i = 1; i < gridSize; i++) {
-        var rowGrid = [];
-        for (let j = gridSize -1 ; j > 0; j--) {
-            var xGrid = -canvasWidth/2 + i * (canvasWidth/gridSize);
-            var yGrid = -canvasWidth/2 + j * (canvasWidth/gridSize);
-            var {ax, ay} = calculateAcceleration(xGrid, yGrid);
-            rowGrid.push([ax, ay]);
+    if (forceFieldGridEnnabled) {
+        forceFieldGrid.length = 0;
+        for (let i = 1; i < gridSize; i++) {
+            var rowGrid = [];
+            for (let j = gridSize -1 ; j > 0; j--) {
+                var xGrid = -canvasWidth/2 + i * (canvasWidth/gridSize);
+                var yGrid = -canvasWidth/2 + j * (canvasWidth/gridSize);
+                var {ax, ay} = calculateAcceleration(xGrid, yGrid);
+                rowGrid.push([ax, ay]);
+            }
+            forceFieldGrid.push(rowGrid)
         }
-        forceFieldGrid.push(rowGrid)
-    }
-    forceFieldGridMagnitude = forceFieldGrid.map( 
-        (row) => { 
-            return row.map( 
-                ([ax,ay]) => {
-                    return Math.sqrt(ax*ax + ay*ay) 
-                }   
-            )
-        }
-    )
-        
-    var largestForce = Math.max(...[].concat(...forceFieldGridMagnitude))
-    if (largestForce != 0) {
-        var scaledForceFieldGrid = forceFieldGrid.map( 
+        forceFieldGridMagnitude = forceFieldGrid.map( 
             (row) => { 
-                return row.map(
+                return row.map( 
                     ([ax,ay]) => {
-                        return [50*ax/largestForce, 50*ay/largestForce] 
-                    }
+                        return Math.sqrt(ax*ax + ay*ay) 
+                    }   
                 )
             }
         )
-        theContext.beginPath();
-        for (let i = 1; i < gridSize; i++) {
-            for (let j = 1; j < gridSize; j++) {
-                var xGrid = i * (canvasWidth/gridSize);
-                var yGrid = j * (canvasWidth/gridSize);
-                var xFin = xGrid + scaledForceFieldGrid[i-1][j-1][0];
-                var yFin = yGrid - scaledForceFieldGrid[i-1][j-1][1];
-                canvas_arrow(theContext, xGrid, yGrid, xFin, yFin);
+            
+        var largestForce = Math.max(...[].concat(...forceFieldGridMagnitude))
+        if (largestForce != 0) {
+            var scaledForceFieldGrid = forceFieldGrid.map( 
+                (row) => { 
+                    return row.map(
+                        ([ax,ay]) => {
+                            return [50*ax/largestForce, 50*ay/largestForce] 
+                        }
+                    )
+                }
+            )
+            theContext.beginPath();
+            for (let i = 1; i < gridSize; i++) {
+                for (let j = 1; j < gridSize; j++) {
+                    var xGrid = i * (canvasWidth/gridSize);
+                    var yGrid = j * (canvasWidth/gridSize);
+                    var xFin = xGrid + scaledForceFieldGrid[i-1][j-1][0];
+                    var yFin = yGrid - scaledForceFieldGrid[i-1][j-1][1];
+                    canvas_arrow(theContext, xGrid, yGrid, xFin, yFin);
+                }
             }
+            theContext.stroke();
         }
-        theContext.stroke();
     }
-    
 }
 
 function calculateAcceleration(x, y) {
@@ -161,6 +165,13 @@ function calculateDeltaXRungeKutta(x, y) {
     return {deltaX, deltaY};
 }
 
+function checkAndRemoveFastParticles(index) {
+    const particle = listOfParticles[index]
+    const speed = Math.sqrt(particle.vx*particle.vx + particle.vy*particle.vy);
+    console.log(speed);
+    if (speed > 3) { listOfParticles.splice(index, 1) }
+}
+
 function drawProjectile(particle) {
     var {x, y, vx, vy} = particle;
     var pixelX = theCanvas.width/2 + x/metersPerPixel;
@@ -176,9 +187,14 @@ function moveProjectiles() {
     if (!paused) {
         theContext.clearRect(0, 0, theCanvas.width, theCanvas.height);
         updateCanvas(); 
-        for (let p = 0; p < listOfParticles.length; p++) {    
+        for (let p = 0; p<listOfParticles.length; p++) {    
             propagateParticleEuler(listOfParticles[p]);
             drawProjectile(listOfParticles[p]);
+        }
+        if (removeFastParticlesEnabled) {
+            for (let p=0; p<listOfParticles.length; p++) {
+                checkAndRemoveFastParticles(p);
+            }
         }
         window.setTimeout(moveProjectiles, 1000/60);
     }
@@ -300,6 +316,16 @@ add10TestParticlesButton.onmouseup = () => {
 
 add100TestParticlesButton.onmouseup = () => {
     addParticleBundle(100);
+}
+
+forceFieldGridEnnabledButton.onmouseup = () => {
+    if (forceFieldGridEnnabled) { forceFieldGridEnnabled = false }
+    else { forceFieldGridEnnabled = true }
+}
+
+removeFastParticles.onmouseup = () => {
+    if (removeFastParticlesEnabled) { removeFastParticlesEnabled = false }
+    else { removeFastParticlesEnabled = true }
 }
 
 moveProjectiles();
