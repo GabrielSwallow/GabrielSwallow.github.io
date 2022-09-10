@@ -5,6 +5,8 @@ var resetButton = document.getElementById("resetButton");
 var addTestParticleButton = document.getElementById("testParticle");
 var addgravityObjectButton = document.getElementById("gravityObject");
 var addReuplsiveObjectButton = document.getElementById("repulsiveObject");
+var add10TestParticlesButton = document.getElementById("10testParticles");
+var add100TestParticlesButton = document.getElementById("100testParticles");
 
 var earthRadius = 1; // 6371000;
 // var mountainHeight = earthRadius * 0.165;
@@ -193,6 +195,19 @@ function addParticle(x, y, vx, vy) {
     );
 };
 
+function addParticleBundle(num) {
+    for (let i=0; i<num; i++){
+        listOfParticles.push(
+            {
+                x: Math.random()*500 - 250,
+                y: Math.random()*500 - 250,
+                vx: Math.random() - 0.5,
+                vy: Math.random() - 0.5,
+            }
+        );
+    }
+};
+
 function addGravityObject(x, y) {
     if (currentAddMode == "gravityObject") {
         attractive = -1;
@@ -279,46 +294,15 @@ addReuplsiveObjectButton.onmouseup = () => {
     currentAddMode = "repulsiveObject";
 }
 
-moveProjectiles();
-
-
-function drawArrow(xInit, yInit, xFin, yFin) {
-    const arrowThikckness = 10;
-    const xDiff = xFin - xInit;
-    const yDiff = yFin - yInit; 
-    if (xDiff != 0) {
-        var theta = Math.atan(-yDiff/xDiff);
-    } else {
-        var theta = (yDiff/Math.abs(yDiff)) * Math.PI;
-    }
-
-
-    const corner1 = [
-        xInit + 5, //arrowThikckness*Math.sin(theta)/2, 
-        yInit // - arrowThikckness*Math.cos(theta)/2
-    ];
-    const corner2 = [
-        corner1[0] + xDiff*Math.cos(theta), 
-        corner1[1] - yDiff*Math.sin(theta)
-    ];
-    const corner3 = [
-        xInit, // - arrowThikckness*Math.sin(theta)/2, 
-        yInit + 5 // arrowThikckness*Math.cos(theta)/2
-    ];
-    const corner4 = [
-        corner3[0] + xDiff*Math.cos(theta), 
-        corner3[1] - yDiff*Math.sin(theta)
-    ];
-
-    theContext.beginPath();
-    theContext.moveTo(...corner1);
-    theContext.lineTo(...corner2);
-    theContext.lineTo(...corner4);
-    theContext.lineTo(...corner3);
-    theContext.lineTo(...corner1);
-    theContext.fillStyle = "red";
-    theContext.fill();
+add10TestParticlesButton.onmouseup = () => {
+    addParticleBundle(10);
 }
+
+add100TestParticlesButton.onmouseup = () => {
+    addParticleBundle(100);
+}
+
+moveProjectiles();
 
 
 function canvas_arrow(context, fromx, fromy, tox, toy) {
