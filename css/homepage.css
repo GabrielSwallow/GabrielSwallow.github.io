@@ -1,7 +1,21 @@
 body {
     background-color: black;
-}
-
-mainText {
+  }
+  
+  .textWrapper {
+    flex: display
+    display: inline-block;
+  }
+  
+  .text {
     color: white;
-}
+    font-size: 100px;
+    margin:0;
+    font-family: 'Space Mono', monospace;
+    user-select: none;
+     text-transform: uppercase;
+  }
+  
+  .text:hover {
+    color: blue;
+  }
